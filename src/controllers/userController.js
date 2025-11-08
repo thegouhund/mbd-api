@@ -129,3 +129,27 @@ export const login = async (request, response) => {
       .json({ message: "Terjadi kesalahan pada server" });
   }
 };
+
+export const getUserCourses = async (request, response) => {
+  const userId = parseInt(request.params.id);
+
+  if (isNaN(userId)) {
+    return response.status(400).json({ message: "Invalid user id" });
+  }
+
+  try {
+    const [result] = await pool.query("CALL GetStudentCourses(?)", [userId]);
+    return response.status(200).json({
+      message: "Berhasil mengambil daftar course untuk user",
+      data: result[0],
+    });
+  } catch (error) {
+    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(403).json({ message: error.sqlMessage });
+    }
+    return response
+      .status(500)
+      .json({ message: "Terjadi kesalahan pada server" });
+  }
+};

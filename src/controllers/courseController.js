@@ -116,3 +116,85 @@ export const deleteCourse = async (request, response) => {
       .json({ message: "Terjadi kesalahan pada server" });
   }
 };
+
+export const enrollUser = async (request, response) => {
+  const courseId = parseInt(request.params.courseId || request.params.id);
+  const { user_id } = request.body;
+
+  if (isNaN(courseId)) {
+    return response.status(400).json({ message: "Invalid course id" });
+  }
+
+  if (!user_id) {
+    return response.status(400).json({ message: "user_id is required" });
+  }
+
+  try {
+    await pool.query("CALL EnrollUser(?, ?)", [user_id, courseId]);
+    return response.status(201).json({
+      message: "User berhasil didaftarkan ke course",
+      data: { course_id: courseId, user_id },
+    });
+  } catch (error) {
+    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(403).json({ message: error.sqlMessage });
+    }
+    return response
+      .status(500)
+      .json({ message: "Terjadi kesalahan pada server" });
+  }
+};
+
+export const unenrollUser = async (request, response) => {
+  const courseId = parseInt(request.params.courseId || request.params.id);
+  const { user_id } = request.body;
+
+  if (isNaN(courseId)) {
+    return response.status(400).json({ message: "Invalid course id" });
+  }
+
+  if (!user_id) {
+    return response.status(400).json({ message: "user_id is required" });
+  }
+
+  try {
+    await pool.query("CALL UnenrollUser(?, ?)", [user_id, courseId]);
+    return response.status(200).json({
+      message: "User berhasil dihapus dari course",
+      data: { course_id: courseId, user_id },
+    });
+  } catch (error) {
+    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(403).json({ message: error.sqlMessage });
+    }
+    return response
+      .status(500)
+      .json({ message: "Terjadi kesalahan pada server" });
+  }
+};
+
+export const getCourseStudents = async (request, response) => {
+  const courseId = parseInt(request.params.id || request.params.courseId);
+
+  if (isNaN(courseId)) {
+    return response.status(400).json({ message: "Invalid course id" });
+  }
+
+  try {
+    const [result] = await pool.query("CALL GetCourseStudents(?)", [courseId]);
+    return response.status(200).json({
+      message: "Berhasil mengambil daftar student untuk course",
+      data: result[0],
+    });
+  } catch (error) {
+    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(403).json({ message: error.sqlMessage });
+    }
+    return response
+      .status(500)
+      .json({ message: "Terjadi kesalahan pada server" });
+  }
+};
