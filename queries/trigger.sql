@@ -29,4 +29,19 @@ BEGIN
     END IF;
 END$$
 
+CREATE TRIGGER before_delete_course_delete_enrollments_modules
+BEFORE DELETE ON courses
+FOR EACH ROW
+BEGIN
+    DELETE FROM enrollments WHERE course_id = OLD.course_id;
+    DELETE FROM modules WHERE course_id = OLD.course_id;
+END$$
+
+CREATE TRIGGER before_delete_user_delete_enrollments
+BEFORE DELETE ON users
+FOR EACH ROW
+BEGIN
+    DELETE FROM enrollments WHERE user_id = OLD.user_id;
+END$$
+
 DELIMITER ;
