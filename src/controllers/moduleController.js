@@ -3,15 +3,21 @@ import pool from "../../config/db.js";
 export const getModulesForCourse = async (request, response) => {
   try {
     const { courseId } = request.params;
-    const [result] = await pool.query("CALL GetModulesForCourse(?)", [
+    const userId = request.session?.user?.user_id;
+
+    const [result] = await pool.query("CALL GetModulesForCourse(?, ?)", [
       courseId,
+      userId,
     ]);
+
     return response.status(200).json({
       message: "Berhasil mengambil daftar modul",
       data: result[0],
     });
   } catch (error) {
-    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(400).json({ message: error.sqlMessage });
+    }
     return response
       .status(500)
       .json({ message: error.sqlMessage || "Terjadi kesalahan pada server" });
@@ -20,11 +26,10 @@ export const getModulesForCourse = async (request, response) => {
 
 export const addModuleToCourse = async (request, response) => {
   try {
-    const { courseId } = request.params;
-    const { title, content } = request.body;
+    const { title, content, course_id } = request.body;
 
     await pool.query("CALL AddModuleToCourse(?, ?, ?)", [
-      courseId,
+      course_id,
       title,
       content,
     ]);
@@ -33,10 +38,12 @@ export const addModuleToCourse = async (request, response) => {
       message: "Berhasil menambahkan modul ke course",
     });
   } catch (error) {
-    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(400).json({ message: error.sqlMessage });
+    }
     return response
       .status(500)
-      .json({ message: error.sqlMessage || "Terjadi kesalahan pada server" });
+      .json({ message: "Terjadi kesalahan pada server" });
   }
 };
 
@@ -56,7 +63,10 @@ export const updateModule = async (request, response) => {
       message: "Berhasil mengupdate modul",
     });
   } catch (error) {
-    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(400).json({ message: error.sqlMessage });
+    }
+
     return response
       .status(500)
       .json({ message: error.sqlMessage || "Terjadi kesalahan pada server" });
@@ -66,15 +76,17 @@ export const updateModule = async (request, response) => {
 export const deleteModule = async (request, response) => {
   try {
     const { moduleId } = request.params;
-    const { creatorId } = request.body;
+    const creator_id = request.session?.user?.user_id;
 
-    await pool.query("CALL DeleteModule(?, ?)", [moduleId, creatorId]);
+    await pool.query("CALL DeleteModule(?, ?)", [moduleId, creator_id]);
 
     return response.status(200).json({
       message: "Berhasil menghapus modul",
     });
   } catch (error) {
-    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(400).json({ message: error.sqlMessage });
+    }
     return response
       .status(500)
       .json({ message: error.sqlMessage || "Terjadi kesalahan pada server" });

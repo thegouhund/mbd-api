@@ -114,6 +114,12 @@ export const login = async (request, response) => {
       return response.status(401).json({ message: loginResult.message });
     }
 
+    request.session.user = {
+      user_id: loginResult.user_id,
+      username: loginResult.username,
+      role: loginResult.role,
+    };
+
     return response.status(200).json({
       message: loginResult.message,
       data: {
@@ -128,6 +134,24 @@ export const login = async (request, response) => {
       .status(500)
       .json({ message: "Terjadi kesalahan pada server" });
   }
+};
+
+export const logout = async (request, response) => {
+  if (!request.session.user) {
+    return response.status(400).json({ message: "Tidak ada sesi aktif" });
+  }
+
+  request.session.destroy((err) => {
+    if (err) {
+      console.log(err);
+      return response
+        .status(500)
+        .json({ message: "Gagal logout, terjadi kesalahan pada server" });
+    }
+
+    response.clearCookie("connect.sid");
+    return response.status(200).json({ message: "Logout berhasil" });
+  });
 };
 
 export const getUserCourses = async (request, response) => {

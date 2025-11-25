@@ -16,12 +16,13 @@ export const getAllCourses = async (request, response) => {
 };
 
 export const createCourse = async (request, response) => {
-  const { title, description, creator_id } = request.body;
+  const { title, description } = request.body;
+  const creator_id = request.session?.user?.user_id;
 
-  if (!title || !description || !creator_id) {
+  if (!title || !description) {
     return response
       .status(400)
-      .json({ message: "Title, description, and creator_id are required" });
+      .json({ message: "Title and description are required" });
   }
 
   try {
@@ -51,16 +52,18 @@ export const createCourse = async (request, response) => {
 
 export const updateCourse = async (request, response) => {
   const courseId = parseInt(request.params.id);
-  const { title, description, creator_id } = request.body;
+  const { title, description } = request.body;
+
+  const creator_id = request.session?.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
   }
 
-  if (!title || !description || !creator_id) {
+  if (!title || !description) {
     return response
       .status(400)
-      .json({ message: "Title, description, and creator_id are required" });
+      .json({ message: "Title and description are required" });
   }
 
   try {
@@ -91,14 +94,10 @@ export const updateCourse = async (request, response) => {
 
 export const deleteCourse = async (request, response) => {
   const courseId = parseInt(request.params.id);
-  const { creator_id } = request.body;
+  const creator_id = request.session?.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
-  }
-
-  if (!creator_id) {
-    return response.status(400).json({ message: "creator_id is required" });
   }
 
   try {
@@ -119,7 +118,7 @@ export const deleteCourse = async (request, response) => {
 
 export const enrollUser = async (request, response) => {
   const courseId = parseInt(request.params.courseId || request.params.id);
-  const { user_id } = request.body;
+  const user_id = request.session?.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
@@ -148,7 +147,7 @@ export const enrollUser = async (request, response) => {
 
 export const unenrollUser = async (request, response) => {
   const courseId = parseInt(request.params.courseId || request.params.id);
-  const { user_id } = request.body;
+  const user_id = request.session?.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
