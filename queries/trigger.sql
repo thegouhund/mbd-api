@@ -1,0 +1,32 @@
+DELIMITER $$
+
+CREATE TRIGGER before_enrollment_insert_check_instructor_role
+BEFORE INSERT ON enrollments
+FOR EACH ROW
+BEGIN
+    DECLARE user_role ENUM('student', 'instructor');
+
+    SELECT role INTO user_role FROM users WHERE user_id = NEW.user_id;
+
+    IF user_role = 'instructor' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Hanya student yang dapat melakukan enroll pada course.';
+    END IF;
+END$$
+
+CREATE TRIGGER before_delete_user_check_courses
+BEFORE DELETE ON users
+FOR EACH ROW
+BEGIN
+    DECLARE course_count INT;
+
+    IF OLD.role = 'instructor' THEN
+        SELECT COUNT(*) INTO course_count FROM courses WHERE creator_id = OLD.user_id;
+        IF course_count > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Tidak dapat menghapus instruktur yang masih memiliki course. Harap hapus atau pindahkan course terlebih dahulu.';
+        END IF;
+    END IF;
+END$$
+
+DELIMITER ;
