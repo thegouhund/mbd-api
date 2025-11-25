@@ -1,27 +1,28 @@
 import express from "express";
 import {
-  getAllCourses,
   createCourse,
-  updateCourse,
   deleteCourse,
   enrollUser,
-  unenrollUser,
+  getAllCourses,
   getCourseStudents,
+  unenrollUser,
+  updateCourse,
 } from "../controllers/courseController.js";
+import { getModulesForCourse } from "../controllers/moduleController.js";
+import { isAuthenticated, isInstructor, isStudent } from "../middleware/auth.js";
 import moduleRoutes from "./moduleRoutes.js";
 
 const router = express.Router();
 
-router.get("/", getAllCourses);
-router.get("/:id/students", getCourseStudents);
-router.post("/", createCourse);
-router.put("/:id", updateCourse);
-router.delete("/:id", deleteCourse);
+router.get("/",isAuthenticated, getAllCourses);
+router.get("/:id/students", isAuthenticated, getCourseStudents);
 
-router.use("/:courseId/modules", moduleRoutes);
+router.post("/", isInstructor, createCourse);
+router.put("/:id", isInstructor, updateCourse);
+router.delete("/:id", isInstructor, deleteCourse);
+router.get("/:courseId/modules", getModulesForCourse);
 
-// Enrollment endpoints
-router.post("/:courseId/enroll", enrollUser);
-router.delete("/:courseId/enroll", unenrollUser);
+router.post("/:courseId/enroll", isStudent, enrollUser);
+router.delete("/:courseId/enroll", isStudent, unenrollUser);
 
 export default router;

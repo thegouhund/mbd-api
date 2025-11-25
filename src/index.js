@@ -5,6 +5,7 @@ import sessionConfig from "../config/session.js";
 import { login, logout, register } from "./controllers/userController.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import moduleRoutes from "./routes/moduleRoutes.js";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.get("/", (request, response) => {
 
 app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api/modules", moduleRoutes);
 app.post("/api/register", register);
 app.post("/api/login", login);
 app.post("/api/logout", logout);

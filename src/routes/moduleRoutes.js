@@ -5,12 +5,13 @@ import {
   updateModule,
   deleteModule,
 } from "../controllers/moduleController.js";
+import { isInstructor } from "../middleware/auth.js";
 
-const router = express.Router({ mergeParams: true });
+const router = express.Router();
 
-router.get("/", getModulesForCourse);
-router.post("/", addModuleToCourse);
-router.put("/:moduleId", updateModule);
-router.delete("/:moduleId", deleteModule);
+
+router.post("/", isInstructor, addModuleToCourse);
+router.put("/:moduleId", isInstructor, updateModule);
+router.delete("/:moduleId", isInstructor, deleteModule);
 
 export default router;

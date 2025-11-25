@@ -3,16 +3,13 @@ import {
   getAllUsers,
   getUserById,
   getUserCourses,
-  register,
-  login,
 } from "../controllers/userController.js";
+import { isAuthenticated, isInstructor } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/", getAllUsers);
-router.get("/:id", getUserById);
-router.get("/:id/courses", getUserCourses);
-router.post("/register", register);
-router.post("/login", login);
+router.get("/", isInstructor, getAllUsers);
+router.get("/:id", isAuthenticated, getUserById);
+router.get("/:id/courses", isAuthenticated, getUserCourses);
 
 export default router;
