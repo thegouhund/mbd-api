@@ -1,3 +1,7 @@
+import dotenv from "dotenv";
+
+dotenv.config();
+
 const sessionConfig = {
   secret: process.env.SESSION_SECRET,
   resave: false,
