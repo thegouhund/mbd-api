@@ -186,16 +186,22 @@ BEGIN
     COMMIT;
 END$$
 
-CREATE OR REPLACE PROCEDURE GetModulesForCourse(IN p_course_id INT)
+CREATE OR REPLACE PROCEDURE GetModulesForCourse(IN p_course_id INT, IN p_user_id INT)
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
         RESIGNAL;
     END;
-    
+
     IF NOT EXISTS (SELECT 1 FROM courses WHERE course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
+    END IF;
+
+    IF NOT IsCreatorOfCourse(p_user_id, p_course_id) THEN 
+        IF NOT IsUserEnrolledInCourse(p_user_id, p_course_id) THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User belum terdaftar di course ini';
+        END IF;
     END IF;
 
     SELECT module_id, title, content FROM v_modules WHERE course_id = p_course_id;
@@ -213,13 +219,9 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Modul tidak ditemukan';
     END IF;
 
-    -- IF NOT EXISTS (
-    --     SELECT 1 FROM modules m
-    --     JOIN courses c ON m.course_id = c.course_id
-    --     WHERE m.module_id = p_module_id AND c.creator_id = p_creator_id
-    -- ) THEN
-    --     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hanya creator course yang dapat mengupdate modul ini.';
-    -- END IF;
+    IF NOT IsCreatorOfCourse(p_creator_id, (SELECT course_id FROM modules WHERE module_id = p_module_id)) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User belum terdaftar di course ini';
+    END IF;
 
     START TRANSACTION;
     UPDATE modules SET title = p_new_title, content = p_new_content WHERE module_id = p_module_id;
@@ -238,13 +240,9 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Modul tidak ditemukan';
     END IF;
 
-    -- IF NOT EXISTS (
-    --     SELECT 1 FROM modules m
-    --     JOIN courses c ON m.course_id = c.course_id
-    --     WHERE m.module_id = p_module_id AND c.creator_id = p_creator_id
-    -- ) THEN
-    --     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hanya creator course yang dapat menghapus modul ini.';
-    -- END IF;
+    IF NOT IsCreatorOfCourse(p_creator_id, (SELECT course_id FROM modules WHERE module_id = p_module_id)) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User belum terdaftar di course ini';
+    END IF;
 
     START TRANSACTION;
     DELETE FROM modules WHERE module_id = p_module_id;
