@@ -22,7 +22,7 @@ BEGIN
     
     SELECT user_id, username, role 
     INTO v_user_id, v_username, v_role
-    FROM users 
+    FROM v_users 
     WHERE username = p_username AND password = SHA2(p_password, 256)
     LIMIT 1;
     
@@ -47,7 +47,7 @@ BEGIN
     END;
 
     SELECT user_id INTO v_existing_user_id
-    FROM users 
+    FROM v_users 
     WHERE username = p_username
     LIMIT 1;
     
@@ -79,7 +79,7 @@ BEGIN
 
     START TRANSACTION;
 
-    SELECT role INTO v_role FROM users WHERE user_id = p_user_id FOR UPDATE;
+    SELECT role INTO v_role FROM v_users WHERE user_id = p_user_id FOR UPDATE;
 
     IF v_role = 'instructor' THEN
         DELETE FROM courses WHERE creator_id = p_user_id;
@@ -156,11 +156,11 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Creator harus role instructor';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM courses WHERE course_id = p_course_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_courses WHERE course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM courses WHERE course_id = p_course_id AND creator_id = p_creator_id) THEN
+    IF NOT IsCreatorOfCourse(p_creator_id, p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hanya creator course yang dapat menghapus course ini.';
     END IF;
 
@@ -169,7 +169,7 @@ BEGIN
     COMMIT;
 END$$
 
-CREATE OR REPLACE PROCEDURE AddModuleToCourse(IN p_course_id INT, IN p_title VARCHAR(255), IN p_content TEXT)
+CREATE OR REPLACE PROCEDURE AddModuleToCourse(IN p_course_id INT, IN p_title VARCHAR(255), IN p_content TEXT, IN p_creator_id INT)
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -177,8 +177,12 @@ BEGIN
         RESIGNAL;
     END;
 
-    IF NOT EXISTS (SELECT 1 FROM courses WHERE course_id = p_course_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_courses WHERE course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
+    END IF;
+
+    IF NOT IsCreatorOfCourse(p_creator_id, p_course_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hanya creator course yang dapat menghapus course ini.';
     END IF;
 
     START TRANSACTION;
@@ -194,7 +198,7 @@ BEGIN
         RESIGNAL;
     END;
 
-    IF NOT EXISTS (SELECT 1 FROM courses WHERE course_id = p_course_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_courses WHERE course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
     END IF;
 
@@ -215,12 +219,12 @@ BEGIN
         RESIGNAL;
     END;
 
-    IF NOT EXISTS (SELECT 1 FROM modules WHERE module_id = p_module_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_modules WHERE module_id = p_module_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Modul tidak ditemukan';
     END IF;
 
-    IF NOT IsCreatorOfCourse(p_creator_id, (SELECT course_id FROM modules WHERE module_id = p_module_id)) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User belum terdaftar di course ini';
+    IF NOT IsCreatorOfCourse(p_creator_id, (SELECT course_id FROM v_modules WHERE module_id = p_module_id)) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hanya creator course yang dapat mengupdate modul ini.';
     END IF;
 
     START TRANSACTION;
@@ -241,7 +245,7 @@ BEGIN
     END IF;
 
     IF NOT IsCreatorOfCourse(p_creator_id, (SELECT course_id FROM modules WHERE module_id = p_module_id)) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User belum terdaftar di course ini';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hanya creator course yang dapat menghapus modul ini.';
     END IF;
 
     START TRANSACTION;
@@ -257,16 +261,16 @@ BEGIN
         RESIGNAL;
     END;
 
-    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_users WHERE user_id = p_user_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User tidak ditemukan';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM courses WHERE course_id = p_course_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_courses WHERE course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM enrollments 
+        SELECT 1 FROM v_enrollments 
         WHERE user_id = p_user_id AND course_id = p_course_id
     ) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User sudah terdaftar di course ini';
@@ -285,15 +289,15 @@ BEGIN
         RESIGNAL;
     END;
 
-    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_users WHERE user_id = p_user_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User tidak ditemukan';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM courses WHERE course_id = p_course_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_courses WHERE course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM enrollments WHERE user_id = p_user_id AND course_id = p_course_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_enrollments WHERE user_id = p_user_id AND course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User tidak terdaftar di course ini';
     END IF;
 
@@ -309,7 +313,7 @@ BEGIN
         ROLLBACK;
         RESIGNAL;
     END;
-    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_users WHERE user_id = p_user_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User tidak ditemukan';
     END IF;
 
@@ -326,7 +330,7 @@ BEGIN
         ROLLBACK;
         RESIGNAL;
     END;
-    IF NOT EXISTS (SELECT 1 FROM courses WHERE course_id = p_course_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_courses WHERE course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
     END IF;
 
