@@ -1,37 +1,38 @@
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET
+
 export const isAuthenticated = (request, response, next) => {
-  if (request.session && request.session.user) {
+  try {
+    const authHeader = request.headers["authorization"];
+    if (!authHeader || typeof authHeader !== "string") {
+      return response.status(401).json({ message: "Unauthorized. Silakan login terlebih dahulu" });
+    }
+
+    const parts = authHeader.split(" ");
+    if (parts.length !== 2 || parts[0] !== "Bearer") {
+      return response.status(401).json({ message: "Unauthorized. Token malformed" });
+    }
+
+    const token = parts[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    request.user = decoded;
     return next();
+  } catch (err) {
+    return response.status(401).json({ message: "Unauthorized. Token invalid or expired" });
   }
-  return response.status(401).json({ message: "Unauthorized. Silakan login terlebih dahulu" });
 };
 
 export const isInstructor = (request, response, next) => {
-  if (request.session && request.session.user) {
-    if (request.session.user.role === "instructor") {
-      return next();
-    }
-    return response.status(403).json({ message: "Forbidden. Hanya instructor yang dapat mengakses" });
+  if (request.user && request.user.role === "instructor") {
+    return next();
   }
-  return response.status(401).json({ message: "Unauthorized. Silakan login terlebih dahulu" });
-};
+  return response.status(403).json({ message: "Forbidden. Hanya instructor yang dapat mengakses" });
+};  
 
 export const isStudent = (request, response, next) => {
-  if (request.session && request.session.user) {
-    if (request.session.user.role === "student") {
-      return next();
-    }
-    return response.status(403).json({ message: "Forbidden. Hanya student yang dapat mengakses" });
+  if (request.user && request.user.role === "student") {
+    return next();
   }
-  return response.status(401).json({ message: "Unauthorized. Silakan login terlebih dahulu" });
+  return response.status(403).json({ message: "Forbidden. Hanya student yang dapat mengakses" });
 };
-
-// export const isAuthenticatedUser = (request, response, next) => {
-//   if (request.session && request.session.user) {
-//     const { role } = request.session.user;
-//     if (role === "instructor" || role === "student") {
-//       return next();
-//     }
-//     return response.status(403).json({ message: "Forbidden. Role tidak valid" });
-//   }
-//   return response.status(401).json({ message: "Unauthorized. Silakan login terlebih dahulu" });
-// };
