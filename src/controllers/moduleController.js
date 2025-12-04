@@ -3,7 +3,7 @@ import pool from "../../config/db.js";
 export const getModulesForCourse = async (request, response) => {
   try {
     const { courseId } = request.params;
-    const userId = request.session?.user?.user_id;
+    const userId = request.user?.user_id;
 
     const [result] = await pool.query("CALL GetModulesForCourse(?, ?)", [
       courseId,
@@ -27,11 +27,13 @@ export const getModulesForCourse = async (request, response) => {
 export const addModuleToCourse = async (request, response) => {
   try {
     const { title, content, course_id } = request.body;
+    const creatorId = request.user?.user_id;
 
-    await pool.query("CALL AddModuleToCourse(?, ?, ?)", [
+    await pool.query("CALL AddModuleToCourse(?, ?, ?, ?)", [
       course_id,
       title,
       content,
+      creatorId,
     ]);
 
     return response.status(201).json({
@@ -50,7 +52,8 @@ export const addModuleToCourse = async (request, response) => {
 export const updateModule = async (request, response) => {
   try {
     const { moduleId } = request.params;
-    const { title, content, creatorId } = request.body;
+    const { title, content } = request.body;
+    const creatorId = request.user?.user_id;
 
     await pool.query("CALL UpdateModule(?, ?, ?, ?)", [
       moduleId,
@@ -76,7 +79,7 @@ export const updateModule = async (request, response) => {
 export const deleteModule = async (request, response) => {
   try {
     const { moduleId } = request.params;
-    const creator_id = request.session?.user?.user_id;
+    const creator_id = request.user?.user_id;
 
     await pool.query("CALL DeleteModule(?, ?)", [moduleId, creator_id]);
 

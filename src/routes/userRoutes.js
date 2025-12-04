@@ -4,12 +4,12 @@ import {
   getUserById,
   getUserCourses,
 } from "../controllers/userController.js";
-import { isAuthenticated, isInstructor } from "../middleware/auth.js";
+import { isAuthenticated, isStudent } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/", isInstructor, getAllUsers);
+router.get("/", isAuthenticated, getAllUsers);
 router.get("/:id", isAuthenticated, getUserById);
-router.get("/:id/courses", isAuthenticated, getUserCourses);
+router.get("/courses", [isAuthenticated, isStudent], getUserCourses);
 
 export default router;

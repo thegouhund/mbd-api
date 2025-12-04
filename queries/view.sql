@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW v_EnrollmentReport AS
+CREATE OR REPLACE VIEW v_enrollmentreport AS
 SELECT
     e.enrollment_id,
     e.created_at AS enrollment_date,
@@ -24,6 +24,7 @@ FROM courses;
 CREATE OR REPLACE VIEW v_enrollments AS
 SELECT
     enrollment_id,
+    users.user_id
     users.username,
     courses.title,
     created_at

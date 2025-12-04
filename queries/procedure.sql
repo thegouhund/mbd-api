@@ -68,30 +68,6 @@ BEGIN
     SELECT user_id, username, role FROM v_users WHERE user_id = p_user_id;
 END$$
 
-CREATE OR REPLACE PROCEDURE DeleteUser(IN p_user_id INT)
-BEGIN
-    DECLARE v_role VARCHAR(20);
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        ROLLBACK;
-        SELECT 'ERROR' AS status, 'Gagal menghapus pengguna' AS message;
-    END;
-
-    START TRANSACTION;
-
-    SELECT role INTO v_role FROM v_users WHERE user_id = p_user_id FOR UPDATE;
-
-    IF v_role = 'instructor' THEN
-        DELETE FROM courses WHERE creator_id = p_user_id;
-    END IF;
-
-    DELETE FROM users WHERE user_id = p_user_id;
-
-    COMMIT;
-    
-    SELECT 'OK' AS status, 'User Berhasil Dihapus' AS message;
-END$$
-
 CREATE OR REPLACE PROCEDURE CreateCourse(
     IN p_title VARCHAR(255),
     IN p_description TEXT,
@@ -127,6 +103,32 @@ BEGIN
     COMMIT;
 END$$
 
+CREATE OR REPLACE PROCEDURE GetCourseById(IN p_course_id INT)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Gagal mengambil daftar course';
+    END;
+
+    START TRANSACTION;
+    SELECT course_id, title, description, creator_id FROM v_courses WHERE course_id = p_course_id;
+    COMMIT;
+END$$
+
+CREATE OR REPLACE PROCEDURE GetCoursesByCreatorId(IN p_creator_id INT)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Gagal mengambil daftar course';
+    END;
+
+    START TRANSACTION;
+    SELECT course_id, title, description, creator_id FROM v_courses WHERE creator_id = p_creator_id;
+    COMMIT;
+END$$
+
 CREATE OR REPLACE PROCEDURE UpdateCourseDetails(IN p_course_id INT, IN p_new_title VARCHAR(255), IN p_new_description TEXT, IN p_creator_id INT)
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -134,6 +136,10 @@ BEGIN
         ROLLBACK;
         RESIGNAL;
     END;
+
+    IF NOT EXISTS (SELECT 1 FROM v_courses WHERE course_id = p_course_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
+    END IF;
 
     IF NOT CheckUserRole(p_creator_id, 'instructor') THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Creator harus role instructor';
@@ -208,7 +214,9 @@ BEGIN
         END IF;
     END IF;
 
-    SELECT module_id, title, content FROM v_modules WHERE course_id = p_course_id;
+    START TRANSACTION;
+    SELECT module_id, module_title, content FROM v_moduledetails WHERE course_id = p_course_id;
+    COMMIT;
 END$$
 
 CREATE OR REPLACE PROCEDURE UpdateModule(IN p_module_id INT, IN p_new_title VARCHAR(255), IN p_new_content TEXT, IN p_creator_id INT)
@@ -270,8 +278,8 @@ BEGIN
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM v_enrollments 
-        WHERE user_id = p_user_id AND course_id = p_course_id
+        SELECT 1 FROM v_enrollmentreport
+        WHERE student_id = p_user_id AND course_id = p_course_id
     ) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User sudah terdaftar di course ini';
     END IF;
@@ -297,7 +305,7 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM v_enrollments WHERE user_id = p_user_id AND course_id = p_course_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM v_enrollmentreport WHERE student_id = p_user_id AND course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User tidak terdaftar di course ini';
     END IF;
 
@@ -317,13 +325,12 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User tidak ditemukan';
     END IF;
 
-    SELECT c.course_id, c.title, c.description
-    FROM v_courses c
-    JOIN enrollments e ON c.course_id = e.course_id
-    WHERE e.user_id = p_user_id;
+    START TRANSACTION;
+    SELECT course_id, course_title FROM v_enrollmentreport WHERE student_id = p_user_id;
+    COMMIT;
 END$$
 
-CREATE OR REPLACE PROCEDURE GetCourseStudents(IN p_course_id INT)
+CREATE OR REPLACE PROCEDURE GetCourseStudents(IN p_creator_id INT, IN p_course_id INT)
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -333,28 +340,37 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM v_courses WHERE course_id = p_course_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
     END IF;
+    
+    IF NOT IsCreatorOfCourse(p_creator_id, p_course_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hanya instructor yang dapat melihat student course';
+    END IF;
 
-    SELECT u.user_id, u.username
-    FROM v_users u
-    JOIN enrollments e ON u.user_id = e.user_id
-    WHERE e.course_id = p_course_id;
+    START TRANSACTION;
+        -- SELECT u.user_id, u.username
+        -- FROM v_users u
+        -- JOIN enrollments e ON u.user_id = e.user_id
+        -- WHERE e.course_id = p_course_id;
+        SELECT student_id, student_name FROM v_enrollmentreport
+        WHERE course_id = p_course_id;
+
+        -- enrolmentsreport
+    COMMIT;
 END$$
 
 CREATE OR REPLACE PROCEDURE GetAllUsers()
 BEGIN
-    SELECT user_id, username, role, password FROM v_users;
+    SELECT user_id, username, role FROM v_users;
 END$$
 
 CREATE OR REPLACE PROCEDURE GetAllInstructors()
 BEGIN
-    SELECT * FROM v_users WHERE role = 'instructor';
+    SELECT user_id, username, role FROM v_users WHERE role = 'instructor';
 END$$
 
 CREATE OR REPLACE PROCEDURE GetAllStudents()
 BEGIN
-    SELECT * FROM v_users WHERE role = 'student';
+    SELECT user_id, username, role FROM v_users WHERE role = 'student';
 END$$
-
 DELIMITER;
 
 CALL Register ( 'instructor_4', 'password123', 'instructor' )

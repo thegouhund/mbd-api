@@ -7,22 +7,23 @@ import {
   getCourseStudents,
   unenrollUser,
   updateCourse,
+  getCourseById
 } from "../controllers/courseController.js";
 import { getModulesForCourse } from "../controllers/moduleController.js";
 import { isAuthenticated, isInstructor, isStudent } from "../middleware/auth.js";
-import moduleRoutes from "./moduleRoutes.js";
 
 const router = express.Router();
 
 router.get("/",isAuthenticated, getAllCourses);
-router.get("/:id/students", isAuthenticated, getCourseStudents);
+router.get("/:id", [isAuthenticated], getCourseById);
+router.get("/:id/students", [isAuthenticated, isInstructor], getCourseStudents);
 
-router.post("/", isInstructor, createCourse);
-router.put("/:id", isInstructor, updateCourse);
-router.delete("/:id", isInstructor, deleteCourse);
-router.get("/:courseId/modules", getModulesForCourse);
+router.post("/", [isAuthenticated, isInstructor], createCourse);
+router.put("/:id", [isAuthenticated, isInstructor], updateCourse);
+router.delete("/:id", [isAuthenticated, isInstructor], deleteCourse);
+router.get("/:courseId/modules", isAuthenticated, getModulesForCourse);
 
-router.post("/:courseId/enroll", isStudent, enrollUser);
-router.delete("/:courseId/enroll", isStudent, unenrollUser);
+router.post("/:courseId/enroll", [isAuthenticated, isStudent], enrollUser);
+router.delete("/:courseId/enroll", [isAuthenticated, isStudent], unenrollUser);
 
 export default router;

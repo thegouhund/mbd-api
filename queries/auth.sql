@@ -3,6 +3,13 @@
 
 -- CREATE USER 'student_1'@'localhost' IDENTIFIED BY 'password_student1';
 -- FLUSH PRIVILEGES;
+
+DROP USER IF EXISTS 'app'@'localhost';
+CREATE USER IF NOT EXISTS 'app'@'localhost' IDENTIFIED BY 'password_db_app';
+GRANT EXECUTE ON *.* TO 'app'@'localhost';
+FLUSH PRIVILEGES;
+SHOW GRANTS FOR 'app'@'localhost';
+
 GRANT EXECUTE ON PROCEDURE course_mbd_db.CreateCourse TO 'instructor_1'@'localhost';
 GRANT EXECUTE ON PROCEDURE course_mbd_db.UpdateCourseDetails TO 'instructor_1'@'localhost';
 GRANT EXECUTE ON PROCEDURE course_mbd_db.DeleteCourse TO 'instructor_1'@'localhost';

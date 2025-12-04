@@ -15,9 +15,28 @@ export const getAllCourses = async (request, response) => {
   }
 };
 
+export const getCourseById = async (request, response) => {
+  const courseId = parseInt(request.params.id);
+
+  if (isNaN(courseId)) {
+    return response.status(400).json({ message: "Invalid course id" });
+  }
+
+  try {
+    const [result] = await pool.query("CALL GetCourseById(?)", [courseId]);
+    return response.status(200).json({
+      message: "Berhasil mengambil course",
+      data: result[0][0],
+    })
+  } catch (error) {
+    console.log(error);
+    return response;
+  }
+};
+
 export const createCourse = async (request, response) => {
   const { title, description } = request.body;
-  const creator_id = request.session?.user?.user_id;
+  const creator_id = request.user?.user_id;
 
   if (!title || !description) {
     return response
@@ -54,7 +73,7 @@ export const updateCourse = async (request, response) => {
   const courseId = parseInt(request.params.id);
   const { title, description } = request.body;
 
-  const creator_id = request.session?.user?.user_id;
+  const creator_id = request.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
@@ -63,7 +82,7 @@ export const updateCourse = async (request, response) => {
   if (!title || !description) {
     return response
       .status(400)
-      .json({ message: "Title and description are required" });
+      .json({ message: "Title dan description harus diisi" });
   }
 
   try {
@@ -84,7 +103,7 @@ export const updateCourse = async (request, response) => {
   } catch (error) {
     console.log(error);
     if (error.sqlMessage) {
-      return response.status(403).json({ message: error.sqlMessage });
+      return response.status(400).json({ message: error.sqlMessage });
     }
     return response
       .status(500)
@@ -94,7 +113,7 @@ export const updateCourse = async (request, response) => {
 
 export const deleteCourse = async (request, response) => {
   const courseId = parseInt(request.params.id);
-  const creator_id = request.session?.user?.user_id;
+  const creator_id = request.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
@@ -117,15 +136,11 @@ export const deleteCourse = async (request, response) => {
 };
 
 export const enrollUser = async (request, response) => {
-  const courseId = parseInt(request.params.courseId || request.params.id);
-  const user_id = request.session?.user?.user_id;
+  const courseId = parseInt(request.params.courseId);
+  const user_id = request.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
-  }
-
-  if (!user_id) {
-    return response.status(400).json({ message: "user_id is required" });
   }
 
   try {
@@ -146,8 +161,8 @@ export const enrollUser = async (request, response) => {
 };
 
 export const unenrollUser = async (request, response) => {
-  const courseId = parseInt(request.params.courseId || request.params.id);
-  const user_id = request.session?.user?.user_id;
+  const courseId = parseInt(request.params.courseId);
+  const user_id = request.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
@@ -176,15 +191,39 @@ export const unenrollUser = async (request, response) => {
 
 export const getCourseStudents = async (request, response) => {
   const courseId = parseInt(request.params.id || request.params.courseId);
+  const creator_id = request.user?.user_id;
 
   if (isNaN(courseId)) {
     return response.status(400).json({ message: "Invalid course id" });
   }
 
   try {
-    const [result] = await pool.query("CALL GetCourseStudents(?)", [courseId]);
+    const [result] = await pool.query("CALL GetCourseStudents(?, ?)", [
+      creator_id,
+      courseId,
+    ]);
     return response.status(200).json({
       message: "Berhasil mengambil daftar student untuk course",
+      data: result[0],
+    });
+  } catch (error) {
+    console.log(error);
+    if (error.sqlMessage) {
+      return response.status(403).json({ message: error.sqlMessage });
+    }
+    return response
+      .status(500)
+      .json({ message: "Terjadi kesalahan pada server" });
+  }
+};
+
+export const getCoursesByCreatorId = async (request, response) => {
+  const creator_id = request.user?.user_id;
+
+  try {
+    const [result] = await pool.query("CALL GetCoursesByCreatorId(?)", [creator_id]);
+    return response.status(200).json({
+      message: "Berhasil mengambil daftar course untuk instructor",
       data: result[0],
     });
   } catch (error) {

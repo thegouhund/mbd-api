@@ -1,4 +1,10 @@
 import pool from "../../config/db.js";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export const getAllUsers = async (request, response) => {
   try {
@@ -102,7 +108,7 @@ export const login = async (request, response) => {
   try {
     const [result] = await pool.query("CALL Login(?, ?)", [username, password]);
     const loginResult =
-      result && result[0] && result[0][0] ? result[0][0] : null;
+      result[0][0];
 
     if (!loginResult) {
       return response
@@ -114,18 +120,19 @@ export const login = async (request, response) => {
       return response.status(401).json({ message: loginResult.message });
     }
 
-    request.session.user = {
+    const payload = {
       user_id: loginResult.user_id,
       username: loginResult.username,
       role: loginResult.role,
     };
 
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
+
     return response.status(200).json({
       message: loginResult.message,
       data: {
-        user_id: loginResult.user_id,
-        username: loginResult.username,
-        role: loginResult.role,
+        token,
+        user: payload,
       },
     });
   } catch (error) {
@@ -136,29 +143,11 @@ export const login = async (request, response) => {
   }
 };
 
-export const logout = async (request, response) => {
-  if (!request.session.user) {
-    return response.status(400).json({ message: "Tidak ada sesi aktif" });
-  }
-
-  request.session.destroy((err) => {
-    if (err) {
-      console.log(err);
-      return response
-        .status(500)
-        .json({ message: "Gagal logout, terjadi kesalahan pada server" });
-    }
-
-    response.clearCookie("connect.sid");
-    return response.status(200).json({ message: "Logout berhasil" });
-  });
-};
-
 export const getUserCourses = async (request, response) => {
-  const userId = parseInt(request.params.id);
+  const userId = request.user?.user_id;
 
   if (isNaN(userId)) {
-    return response.status(400).json({ message: "Invalid user id" });
+    return response.status(400).json({ message: "Invalid user id", userId });
   }
 
   try {
