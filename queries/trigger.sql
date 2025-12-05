@@ -15,19 +15,17 @@ BEGIN
 END$$
 
 
-CREATE TRIGGER before_delete_course_delete_enrollments_modules
+DROP TRIGGER before_delete_course_delete_enrollments_modules;
+CREATE TRIGGER before_delete_course_prevent_if_enrollments_exist
 BEFORE DELETE ON courses
 FOR EACH ROW
 BEGIN
-    DELETE FROM enrollments WHERE course_id = OLD.course_id;
-    DELETE FROM modules WHERE course_id = OLD.course_id;
+    DECLARE enrollments_count INT;
+    SELECT COUNT(enrollment_id) INTO enrollments_count from enrollments where course_id = OLD.course_id;
+    IF (enrollments_count > 0) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Masih ada user yang terdaftar dalam course ini';
+    END IF;
 END$$
 
-CREATE TRIGGER before_delete_user_delete_enrollments
-BEFORE DELETE ON users
-FOR EACH ROW
-BEGIN
-    DELETE FROM enrollments WHERE user_id = OLD.user_id;
-END$$
 
 DELIMITER ;
