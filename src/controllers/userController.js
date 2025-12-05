@@ -6,47 +6,6 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-export const getAllUsers = async (request, response) => {
-  try {
-    const [result] = await pool.query("CALL GetAllUsers()");
-    return response.status(200).json({
-      message: "Berhasil mengambil data pengguna",
-      data: result[0],
-    });
-  } catch (error) {
-    console.log(error);
-    return response
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server" });
-  }
-};
-
-export const getUserById = async (request, response) => {
-  const userId = parseInt(request.params.id);
-  if (isNaN(userId)) {
-    return response.status(400).json({ message: "Invalid user id" });
-  }
-
-  try {
-    const [result] = await pool.query("CALL GetUserByID(?)", [userId]);
-    const user = result && result[0] && result[0][0] ? result[0][0] : null;
-
-    if (!user) {
-      return response.status(404).json({ message: "User not found" });
-    }
-
-    return response.status(200).json({
-      message: "Berhasil mengambil data pengguna",
-      data: user,
-    });
-  } catch (error) {
-    console.log(error);
-    return response
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server" });
-  }
-};
-
 export const register = async (request, response) => {
   const { username, password, role } = request.body;
 

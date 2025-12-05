@@ -277,11 +277,8 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course tidak ditemukan';
     END IF;
 
-    IF EXISTS (
-        SELECT 1 FROM v_enrollmentreport
-        WHERE student_id = p_user_id AND course_id = p_course_id
-    ) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User sudah terdaftar di course ini';
+    IF (IsUserEnrolledInCourse(p_user_id, p_course_id)) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User sudah terdaftar dalam course';
     END IF;
 
     START TRANSACTION;
@@ -357,20 +354,6 @@ BEGIN
     COMMIT;
 END$$
 
-CREATE OR REPLACE PROCEDURE GetAllUsers()
-BEGIN
-    SELECT user_id, username, role FROM v_users;
-END$$
-
-CREATE OR REPLACE PROCEDURE GetAllInstructors()
-BEGIN
-    SELECT user_id, username, role FROM v_users WHERE role = 'instructor';
-END$$
-
-CREATE OR REPLACE PROCEDURE GetAllStudents()
-BEGIN
-    SELECT user_id, username, role FROM v_users WHERE role = 'student';
-END$$
 DELIMITER;
 
 CALL Register ( 'instructor_4', 'password123', 'instructor' )
@@ -378,8 +361,7 @@ CALL Register ( 'instructor_4', 'password123', 'instructor' )
 CALL Login ( 'student_5', 'password123', @current_user_id );
 
 SELECT @current_user_id AS current_user_id;
-
-CALL GetAllUsers ();
+SHOW PROCEDURE STATUS;
 -- CALL CreateCourse ( 'Javascript', 'Belajar Javascript', 15 );
 -- CALL CreateCourse('Database', 'Belajar Database', 1);
 CALL CreateCourse (
@@ -389,7 +371,6 @@ CALL CreateCourse (
 );
 
 CALL GetAllCourses ();
--- CALL DeleteUser(1);
 CALL AddModuleToCourse (
     66,
     'Variabel dan Tipe Data',
@@ -412,7 +393,6 @@ CALL GetModulesForCourse (66);
 -- CALL DeleteModule(8);
 -- CALL GetStudentCourses(3);
 -- CALL GetCourseStudents(1);
--- CALL UpdateUserPassword(2, 'new_secure_password');
 -- CALL UpdateCourseDetails (
 --     57,
 --     'Advanced Database Concepts',

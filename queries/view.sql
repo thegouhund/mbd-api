@@ -49,7 +49,3 @@ SELECT
     c.title AS course_title
 FROM modules m
     JOIN courses c ON m.course_id = c.course_id;
-
-SELECT * FROM v_EnrollmentReport;
-
-SELECT * FROM v_ModuleDetails;
