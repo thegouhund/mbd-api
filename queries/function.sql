@@ -18,7 +18,7 @@ RETURNS BOOLEAN
 DETERMINISTIC
 BEGIN
     DECLARE v_count INT;
-    SELECT COUNT(*) INTO v_count FROM enrollments WHERE user_id = p_user_id AND course_id = p_course_id;
+    SELECT COUNT(enrollment_id) INTO v_count FROM enrollments WHERE user_id = p_user_id AND course_id = p_course_id;
     IF v_count > 0 THEN
         RETURN TRUE;
     ELSE
@@ -31,12 +31,21 @@ RETURNS BOOLEAN
 DETERMINISTIC
 BEGIN
     DECLARE v_count INT;
-    SELECT COUNT(*) INTO v_count FROM courses WHERE creator_id = p_user_id AND course_id = p_course_id;
+    SELECT COUNT(course_id) INTO v_count FROM courses WHERE creator_id = p_user_id AND course_id = p_course_id;
     IF v_count > 0 THEN
         RETURN TRUE;
     ELSE
         RETURN FALSE;
     END IF;
 END$$
+
+-- CREATE OR REPLACE FUNCTION GetTotalCoursesByUser(p_user_id INT)
+-- RETURNS INT
+-- DETERMINISTIC
+-- BEGIN
+--     DECLARE v_total INT;
+--     SELECT COUNT(course_id) INTO v_total FROM courses WHERE creator_id = p_user_id;
+--     RETURN v_total;
+-- END$$
 
 DELIMITER ;
